@@ -23,7 +23,7 @@ import com.example.fittrack.ui.components.WorkoutCard
 import com.example.fittrack.ui.navigation.FitTrackBottomNavigation
 import com.example.fittrack.ui.viewmodels.HomeViewModel
 
-
+// HomeScreen.kt
 @Composable
 fun HomeScreen(
     navController: NavHostController,
