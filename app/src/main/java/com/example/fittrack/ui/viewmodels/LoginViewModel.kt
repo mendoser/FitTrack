@@ -2,42 +2,42 @@ package com.example.fittrack.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.fittrack.domain.usecases.SignInUseCase
+import com.example.fittrack.data.repository.AuthRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class LoginViewModel(private val signInUseCase: SignInUseCase) : ViewModel() {
+sealed class LoginUiState {
+    object Idle : LoginUiState()
+    object Loading : LoginUiState()
+    object Success : LoginUiState()
+    class Error(val message: String) : LoginUiState()
+}
 
-    private val _uiState = MutableStateFlow<LoginUiState>(LoginUiState.Initial)
+@HiltViewModel
+class LoginViewModel @Inject constructor(
+    private val repository: AuthRepository
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
     val uiState: StateFlow<LoginUiState> = _uiState
 
     fun login(email: String, password: String) {
-        if (email.isBlank() || password.isBlank()) {
-            _uiState.value = LoginUiState.Error("Email and password cannot be empty")
-            return
-        }
-
         _uiState.value = LoginUiState.Loading
-
         viewModelScope.launch {
-            signInUseCase(email, password).collect { result ->
-                _uiState.value = result.fold(
-                    onSuccess = { LoginUiState.Success },
-                    onFailure = { LoginUiState.Error(it.message ?: "Unknown error") }
-                )
+            try {
+                val success = repository.login(email, password)
+                _uiState.value = if (success) LoginUiState.Success
+                else LoginUiState.Error("Invalid credentials")
+            } catch (e: Exception) {
+                _uiState.value = LoginUiState.Error("Login failed: ${e.message}")
             }
         }
     }
 
     fun resetState() {
-        _uiState.value = LoginUiState.Initial
+        _uiState.value = LoginUiState.Idle
     }
-}
-
-sealed class LoginUiState {
-    object Initial : LoginUiState()
-    object Loading : LoginUiState()
-    object Success : LoginUiState()
-    data class Error(val message: String) : LoginUiState()
 }
